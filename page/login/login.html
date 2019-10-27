@@ -13,14 +13,141 @@
     <meta name="description" content=""/>
     <script src="../../commonjs/vue.js"></script>
     <script src="../../commonjs/jquery.min.js"></script>
+    <script src="../../commonjs/dialog.js"></script>
     <script src="../../commonjs/jquery.form.min.js"></script>
     <link href="index.css" rel="stylesheet">
 
 </head>
-
-
-
 <body>
+<div id="vue_page" v-cloak="">
+    <div class="login-wrap">
+        <div class="inner">
+            <form action="http://192.168.16.161:8898/user/login" method="post" id="form1">
+                <div class="login-logo"><a href=""></a></div>
+                <div class="gradient-border login-user">
+                    <input v-model="user_name"
+                           placeholder="请输入您的邮箱"
+                           value=""
+                           type="text">
+                </div>
+                <div class="gradient-border login-key">
+                    <input v-model="password"
+                           placeholder="请输入您的密码"
+                           value=""
+                           type="password"
+                    >
+                </div>
+                <div class="gradient-border login-code">
+                    <input v-model="captcha"
+                           placeholder="请输入验证码"
+                           value=""
+                           type="text">
+                </div>
+
+                <img :src="imgCode" @click="getImgCode" alt="waiting...">
+
+                <div class="gradient-border login-btn">
+                    <button type="button" @click="login" name="login">登录</button>
+                </div>
+
+            </form>
+
+            <div class="right-info">
+                <p>版本号：v{{'1.0.0'}}</p>
+                <p>汇付天下有限公司版权所有 <br>Copyright 2018 ChinaPnR All Right Reserved <br> 沪ICP备17052888号-1</p>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 </body>
+
+<script>
+    let G_DATAAJAX;
+    const baseURL = 'http://192.168.16.161:8898';
+    let app = new Vue({
+        el:'#vue_page',
+        data:{
+            user_name:'',
+            password:'',
+            imgCode:'',
+            captcha:'',
+            token:'',
+        },
+        methods:{
+            getImgCode(){
+                let _random = Math.floor(Math.random() * 10000);
+                this.imgCode = `${baseURL}/user/captcha?random=${_random}&token=${this.token}`;
+            },
+
+            login(){
+                let url = '${baseURL}/user/login';
+                let param ={
+                    user_name: this.user_name,
+                    password: this.password,
+                    captcha: this.captcha,
+                    token: this.token
+                };
+
+                if(G_DATAAJAX !== undefined) G_DATAAJAX.abort();
+                G_DATAAJAX = $.ajax({
+                    url:url,
+                    dataType:'json',
+                    data:param,
+                    type:'post',
+                    success:(data) => {
+                        if(data.return_code === '90000'){
+                            localStorage.setItem("UserInfo", JSON.stringify(data.data))
+                            location.href = '../userGroupManage/index.html';
+                        }else{
+
+                        }
+                    },
+                    error:(e) =>{
+
+                    }
+                })
+
+            },
+
+
+            pop(content) {
+                $('.ui-popup').next().remove();
+                $('.ui-popup,.ui-popup-backdrop').remove();
+                let d = dialog({
+                    title: '标题',
+                    content: content,
+                    fixed: true,
+                    skin: 'dialog-error'
+                });
+                d.show();
+                d.showModal();
+            },
+
+            getToken(){
+                $.ajax({
+                    url:`${baseURL}/user/token`,
+                    dataType: 'json',
+                    type: 'get',
+                    success:(data=>{
+                        this.token = data.data.token;
+                        localStorage.setItem("token", this.token)
+                        let _random = Math.floor(Math.random() * 10000);//随机数
+                        this.imgCode = `${baseURL}/user/captcha?random=${_random}&token=${this.token}`;
+                    }),
+                    error:(e)=>{
+                        if (e.responseJSON && e.responseJSON.message) {
+                            this.pop(e.responseJSON.message)
+                        }else{
+                            this.pop('网络错误')
+                        }
+                    }
+                })
+            }
+
+        }
+    })
+
+</script>
 </html>
